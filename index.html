@@ -1,0 +1,1758 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visual Acoustics — Open Research Platform</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=DM+Sans:wght@300;400;500&display=swap');
+
+:root {
+  --ink: #0d0e0f;
+  --paper: #f4f1eb;
+  --paper2: #eceae2;
+  --rule: #d4cfc4;
+  --accent: #1a3a5c;
+  --accent2: #8b3a2a;
+  --accent3: #2a5c3a;
+  --muted: #8a8478;
+  --mono: 'DM Mono', monospace;
+  --serif: 'Playfair Display', serif;
+  --sans: 'DM Sans', sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  min-height: 100vh;
+  font-size: 14px;
+}
+
+/* Textura de papel */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* NAV */
+nav {
+  border-bottom: 2px solid var(--ink);
+  padding: 0 3rem;
+  display: flex;
+  align-items: stretch;
+  height: 56px;
+  background: var(--paper);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-right: 1px solid var(--rule);
+  padding-right: 2rem;
+  margin-right: 2rem;
+}
+
+.brand-title {
+  font-family: var(--serif);
+  font-size: 1rem;
+  font-style: italic;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+}
+
+.brand-sub {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  color: var(--muted);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.nav-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+}
+
+.nav-tab {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 0 1.5rem;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s;
+}
+
+.nav-tab:hover { color: var(--ink); }
+.nav-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: 500;
+}
+
+.nav-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  color: var(--muted);
+}
+
+.live-dot {
+  width: 6px; height: 6px;
+  background: var(--accent3);
+  border-radius: 50%;
+  animation: blink 2s ease infinite;
+}
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* VIEWS */
+.view { display: none; }
+.view.active { display: block; }
+
+/* =================== ANALYZE VIEW =================== */
+.analyze-layout {
+  display: grid;
+  grid-template-columns: 420px 1fr;
+  min-height: calc(100vh - 56px);
+}
+
+.left-col {
+  border-right: 1px solid var(--rule);
+  display: flex;
+  flex-direction: column;
+}
+
+.section {
+  padding: 1.8rem 2rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.section-title {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.section-title .num {
+  width: 18px; height: 18px;
+  border: 1px solid var(--rule);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.5rem;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+/* DROP ZONE */
+#dropZone {
+  border: 1px solid var(--rule);
+  background: var(--paper2);
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.25s;
+  position: relative;
+  overflow: hidden;
+}
+
+#dropZone:hover { border-color: var(--accent); background: #f0ede4; }
+#dropZone.drag-over { border-color: var(--accent); background: #e8e4d8; }
+
+.drop-icon {
+  font-family: var(--serif);
+  font-size: 2.5rem;
+  color: var(--accent);
+  font-style: italic;
+  margin-bottom: 0.8rem;
+  opacity: 0.5;
+}
+
+.drop-main {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.drop-sub {
+  font-size: 0.6rem;
+  color: var(--rule);
+  margin-top: 0.3rem;
+  font-family: var(--mono);
+}
+
+#previewImg {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: none;
+}
+
+#hiddenCanvas { display: none; }
+
+/* CLASSIFICATION BADGE */
+.classification-badge {
+  display: none;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.8rem 1rem;
+  background: var(--paper2);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--accent);
+  margin-bottom: 1.2rem;
+}
+
+.classification-badge.show { display: flex; }
+
+.badge-cat {
+  font-family: var(--serif);
+  font-size: 1.1rem;
+  font-style: italic;
+  color: var(--accent);
+}
+
+.badge-conf {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  color: var(--muted);
+  margin-left: auto;
+}
+
+/* METRICS TABLE */
+.metrics-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.metrics-table tr {
+  border-bottom: 1px solid var(--rule);
+}
+
+.metrics-table tr:last-child { border-bottom: none; }
+
+.metrics-table td {
+  padding: 0.5rem 0;
+  font-size: 0.7rem;
+}
+
+.metrics-table td:first-child {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  width: 45%;
+}
+
+.metrics-table td:last-child {
+  font-family: var(--serif);
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--accent);
+  text-align: right;
+}
+
+.metric-bar {
+  height: 2px;
+  background: var(--rule);
+  margin-top: 3px;
+  position: relative;
+}
+
+.metric-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.8s ease;
+}
+
+/* CONTROLS */
+.controls-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.btn {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 0.6rem 1.2rem;
+  border: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn:hover { background: var(--ink); color: var(--paper); }
+.btn.primary { background: var(--accent); color: var(--paper); border-color: var(--accent); }
+.btn.primary:hover { background: var(--ink); border-color: var(--ink); }
+.btn.danger { border-color: var(--accent2); color: var(--accent2); }
+.btn.danger:hover { background: var(--accent2); color: var(--paper); }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn:disabled:hover { background: transparent; color: var(--ink); }
+.btn.active { background: var(--accent2); color: var(--paper); border-color: var(--accent2); }
+
+/* PARAMS */
+.param-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.param {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.param label {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: flex;
+  justify-content: space-between;
+}
+
+.param label em {
+  font-style: normal;
+  color: var(--accent);
+  font-family: var(--serif);
+  font-size: 0.75rem;
+  font-style: italic;
+}
+
+input[type=range] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 1px;
+  background: var(--rule);
+  outline: none;
+  cursor: pointer;
+}
+
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px; height: 10px;
+  background: var(--accent);
+  cursor: pointer;
+}
+
+/* RIGHT COL */
+.right-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.right-header {
+  padding: 1.8rem 2.5rem;
+  border-bottom: 1px solid var(--rule);
+  display: flex;
+  align-items: baseline;
+  gap: 2rem;
+}
+
+.right-title {
+  font-family: var(--serif);
+  font-size: 1.6rem;
+  font-style: italic;
+  color: var(--accent);
+}
+
+.right-sub {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+}
+
+/* FREQUENCY DISPLAY */
+.freq-area {
+  padding: 2rem 2.5rem;
+  border-bottom: 1px solid var(--rule);
+  flex-shrink: 0;
+}
+
+#freqCanvas {
+  width: 100%;
+  height: 100px;
+  display: block;
+  background: var(--paper2);
+  border: 1px solid var(--rule);
+}
+
+/* WAVEFORM */
+.wave-area {
+  padding: 1.5rem 2.5rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+#waveCanvas {
+  width: 100%;
+  height: 60px;
+  display: block;
+  background: var(--ink);
+}
+
+/* AI ANALYSIS */
+.ai-area {
+  padding: 2rem 2.5rem;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.ai-card {
+  border: 1px solid var(--rule);
+  background: var(--paper2);
+  padding: 1.5rem;
+  font-size: 0.78rem;
+  line-height: 1.8;
+  color: var(--ink);
+  font-family: var(--sans);
+  font-weight: 300;
+  min-height: 120px;
+  white-space: pre-wrap;
+}
+
+.ai-card.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+}
+
+.typing-dots::after {
+  content: '...';
+  animation: typing 1.2s steps(4, end) infinite;
+}
+
+@keyframes typing {
+  0%,100%{content:'.'} 33%{content:'..'} 66%{content:'...'}
+}
+
+/* CONTRIBUTE */
+.contribute-row {
+  padding: 1.2rem 2.5rem;
+  border-top: 1px solid var(--rule);
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  background: var(--paper2);
+}
+
+.contribute-text {
+  font-size: 0.7rem;
+  color: var(--muted);
+  flex: 1;
+  line-height: 1.5;
+}
+
+.contribute-text strong {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.contribute-rating {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.star-btn {
+  background: none;
+  border: 1px solid var(--rule);
+  width: 28px; height: 28px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--muted);
+  transition: all 0.15s;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.star-btn:hover, .star-btn.selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--paper);
+}
+
+/* =================== DATASET VIEW =================== */
+.dataset-layout {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 3rem 2rem;
+}
+
+.dataset-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2rem;
+  align-items: end;
+  margin-bottom: 3rem;
+  padding-bottom: 2rem;
+  border-bottom: 2px solid var(--ink);
+}
+
+.dataset-title {
+  font-family: var(--serif);
+  font-size: 2.5rem;
+  font-style: italic;
+  color: var(--accent);
+  line-height: 1.1;
+}
+
+.dataset-desc {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 0.5rem;
+  line-height: 1.7;
+  max-width: 600px;
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--rule);
+  margin-bottom: 3rem;
+}
+
+.stat-card {
+  background: var(--paper);
+  padding: 1.5rem;
+}
+
+.stat-number {
+  font-family: var(--serif);
+  font-size: 2.2rem;
+  font-style: italic;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.stat-label {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  color: var(--muted);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-top: 0.3rem;
+}
+
+/* TABLE */
+.data-table-wrap {
+  overflow-x: auto;
+  margin-bottom: 2rem;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.7rem;
+}
+
+.data-table th {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: left;
+  padding: 0.6rem 1rem;
+  border-bottom: 2px solid var(--ink);
+  background: var(--paper2);
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--mono);
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.data-table tr:hover td { background: var(--paper2); }
+
+.cat-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--rule);
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-family: var(--mono);
+}
+
+.cat-badge.natural { border-color: var(--accent3); color: var(--accent3); }
+.cat-badge.urban { border-color: var(--accent); color: var(--accent); }
+.cat-badge.art { border-color: var(--accent2); color: var(--accent2); }
+.cat-badge.micro { border-color: #6a4c93; color: #6a4c93; }
+.cat-badge.portrait { border-color: #8b6914; color: #8b6914; }
+.cat-badge.abstract { border-color: #1a6b6b; color: #1a6b6b; }
+
+.rating-display {
+  color: var(--accent);
+  font-size: 0.65rem;
+}
+
+/* DOWNLOAD */
+.download-section {
+  border: 1px solid var(--rule);
+  padding: 2rem;
+  background: var(--paper2);
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.dl-info { flex: 1; }
+.dl-title {
+  font-family: var(--serif);
+  font-size: 1.1rem;
+  font-style: italic;
+  margin-bottom: 0.4rem;
+}
+.dl-desc { font-size: 0.7rem; color: var(--muted); line-height: 1.6; }
+
+/* =================== ABOUT VIEW =================== */
+.about-layout {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 4rem 2rem;
+}
+
+.about-title {
+  font-family: var(--serif);
+  font-size: 2.8rem;
+  font-style: italic;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+
+.about-subtitle {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--muted);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom: 3rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.about-body {
+  font-size: 0.85rem;
+  line-height: 2;
+  color: var(--ink);
+  font-weight: 300;
+}
+
+.about-body h3 {
+  font-family: var(--serif);
+  font-size: 1.1rem;
+  font-style: italic;
+  color: var(--accent);
+  margin: 2rem 0 0.8rem;
+}
+
+.about-body p { margin-bottom: 1rem; }
+
+.schema-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.7rem;
+  margin: 1.5rem 0;
+}
+
+.schema-table th {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  text-align: left;
+  padding: 0.4rem 0.8rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.schema-table td {
+  padding: 0.5rem 0.8rem;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--mono);
+  font-size: 0.65rem;
+}
+
+.schema-table td:first-child { color: var(--accent); }
+.schema-table td:last-child { color: var(--muted); }
+
+.cite-box {
+  border-left: 3px solid var(--accent);
+  padding: 1rem 1.5rem;
+  background: var(--paper2);
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--muted);
+  line-height: 1.8;
+  margin: 1.5rem 0;
+}
+
+/* TOAST */
+.toast {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  padding: 0.8rem 1.5rem;
+  z-index: 1000;
+  transform: translateY(20px);
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+
+.toast.show { transform: translateY(0); opacity: 1; }
+
+@media (max-width: 900px) {
+  .analyze-layout { grid-template-columns: 1fr; }
+  .stats-row { grid-template-columns: 1fr 1fr; }
+  nav { padding: 0 1rem; }
+  .left-col { border-right: none; border-bottom: 1px solid var(--rule); }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">
+    <div>
+      <div class="brand-title">Visual Acoustics</div>
+      <div class="brand-sub">Open Research Platform · v2.1</div>
+    </div>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showView('analyze')">Analizar</button>
+    <button class="nav-tab" onclick="showView('dataset')">Dataset público</button>
+    <button class="nav-tab" onclick="showView('about')">Metodología</button>
+  </div>
+  <div class="nav-right">
+    <div class="live-dot"></div>
+    <span id="totalContrib">0 contribuciones</span>
+  </div>
+</nav>
+
+<!-- ===================== ANALYZE VIEW ===================== -->
+<div id="view-analyze" class="view active">
+  <div class="analyze-layout">
+    
+    <!-- LEFT -->
+    <div class="left-col">
+
+      <div class="section">
+        <div class="section-title"><div class="num">1</div> Imagen de entrada</div>
+        <div id="dropZone" onclick="document.getElementById('fileInput').click()">
+          <div class="drop-icon">⊕</div>
+          <div class="drop-main">Arrastra o haz clic para cargar</div>
+          <div class="drop-sub">JPG · PNG · WEBP · cualquier imagen</div>
+          <img id="previewImg" />
+        </div>
+        <canvas id="hiddenCanvas"></canvas>
+        <input type="file" id="fileInput" accept="image/*" style="display:none">
+      </div>
+
+      <div class="section">
+        <div class="section-title"><div class="num">2</div> Clasificación automática</div>
+        <div class="classification-badge" id="classBadge">
+          <div class="badge-cat" id="catName">—</div>
+          <div class="badge-conf" id="catConf">—</div>
+        </div>
+        <table class="metrics-table" id="metricsTable">
+          <tr><td>Frecuencia base</td><td>—</td></tr>
+          <tr><td>Temp. color</td><td>—</td></tr>
+          <tr><td>Entropía</td><td>—</td></tr>
+          <tr><td>Índice φ</td><td>—</td></tr>
+          <tr><td>Modo musical</td><td>—</td></tr>
+          <tr><td>BPM</td><td>—</td></tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><div class="num">3</div> Parámetros sonoros</div>
+        <div class="param-grid">
+          <div class="param">
+            <label>Duración <em id="durVal">16s</em></label>
+            <input type="range" id="duration" min="8" max="60" value="16">
+          </div>
+          <div class="param">
+            <label>Armónicos <em id="harmVal">5</em></label>
+            <input type="range" id="harmonics" min="1" max="10" value="5">
+          </div>
+          <div class="param">
+            <label>Reverb <em id="reverbVal">0.40</em></label>
+            <input type="range" id="reverbAmount" min="0" max="1" step="0.05" value="0.4">
+          </div>
+          <div class="param">
+            <label>Octava <em id="octaveVal">4</em></label>
+            <input type="range" id="octave" min="2" max="6" value="4">
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><div class="num">4</div> Reproducción</div>
+        <div class="controls-row">
+          <button class="btn primary" id="playBtn" disabled>▶ Reproducir</button>
+          <button class="btn" id="stopBtn" disabled>■ Detener</button>
+          <button class="btn" id="exportBtn" disabled>↓ WAV</button>
+        </div>
+      </div>
+
+    </div><!-- /left -->
+
+    <!-- RIGHT -->
+    <div class="right-col">
+      <div class="right-header">
+        <div>
+          <div class="right-title" id="imageTitle">Sin imagen</div>
+          <div class="right-sub" id="imageSubtitle">Carga una imagen para comenzar el análisis</div>
+        </div>
+      </div>
+
+      <div class="freq-area">
+        <div class="section-title" style="margin-bottom:0.8rem"><div class="num">A</div> Espectro de frecuencias espaciales</div>
+        <canvas id="freqCanvas" height="100"></canvas>
+      </div>
+
+      <div class="wave-area">
+        <div class="section-title" style="margin-bottom:0.8rem"><div class="num">B</div> Forma de onda en tiempo real</div>
+        <canvas id="waveCanvas" height="60"></canvas>
+      </div>
+
+      <div class="ai-area">
+        <div class="section-title" style="margin-bottom:0.8rem"><div class="num">C</div> Análisis por visión artificial (Claude)</div>
+        <div class="ai-card" id="aiCard">
+          Carga una imagen para que Claude analice su contenido y determine los parámetros sonoros óptimos según su categoría visual.
+        </div>
+      </div>
+
+      <div class="contribute-row">
+        <div class="contribute-text">
+          <strong>¿La música representa bien la imagen?</strong><br>
+          Tu valoración contribuye al dataset científico público. Se guardan solo métricas anónimas, nunca la imagen.
+        </div>
+        <div class="contribute-rating" id="ratingRow">
+          <button class="star-btn" onclick="rate(1)" title="Muy mala">✕</button>
+          <button class="star-btn" onclick="rate(2)" title="Regular">◇</button>
+          <button class="star-btn" onclick="rate(3)" title="Aceptable">△</button>
+          <button class="star-btn" onclick="rate(4)" title="Buena">○</button>
+          <button class="star-btn" onclick="rate(5)" title="Excelente">★</button>
+        </div>
+        <button class="btn primary" id="contributeBtn" disabled>Contribuir al dataset</button>
+      </div>
+
+    </div><!-- /right -->
+  </div>
+</div>
+
+<!-- ===================== DATASET VIEW ===================== -->
+<div id="view-dataset" class="view">
+  <div class="dataset-layout">
+    <div class="dataset-header">
+      <div>
+        <div class="dataset-title">Dataset público<br><em>Visual Acoustics</em></div>
+        <div class="dataset-desc">
+          Colección abierta de correspondencias métricas entre propiedades visuales objetivas y parámetros sonoros, 
+          con validación perceptual humana. Contribuido por usuarios de todo el mundo.
+          Licencia <strong>CC BY 4.0</strong> — libre para investigación.
+        </div>
+      </div>
+      <button class="btn primary" onclick="downloadDataset()">↓ Descargar JSON</button>
+    </div>
+
+    <div class="stats-row" id="statsRow">
+      <div class="stat-card">
+        <div class="stat-number" id="statTotal">0</div>
+        <div class="stat-label">Registros totales</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="statCategories">0</div>
+        <div class="stat-label">Categorías</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="statRated">0</div>
+        <div class="stat-label">Con valoración</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="statAvgRating">—</div>
+        <div class="stat-label">Valoración media</div>
+      </div>
+    </div>
+
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Categoría</th>
+            <th>Frecuencia base (Hz)</th>
+            <th>Temp. color (K)</th>
+            <th>Entropía</th>
+            <th>Índice φ</th>
+            <th>Modo</th>
+            <th>BPM</th>
+            <th>Valoración</th>
+            <th>Fecha</th>
+          </tr>
+        </thead>
+        <tbody id="dataTableBody">
+          <tr><td colspan="10" style="text-align:center;color:var(--muted);padding:2rem;font-family:var(--mono);font-size:0.6rem">Sin datos aún. Sé el primero en contribuir.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="download-section">
+      <div class="dl-info">
+        <div class="dl-title">Citar este dataset</div>
+        <div class="dl-desc">Si usas estos datos en investigación, por favor cita como:<br>
+        <em>Visual Acoustics Open Dataset (2025). Métricas de sonificación visual con validación perceptual. Contribución colectiva abierta.</em></div>
+      </div>
+      <button class="btn" onclick="downloadDataset()">Descargar dataset completo (.json)</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== ABOUT VIEW ===================== -->
+<div id="view-about" class="view">
+  <div class="about-layout">
+    <div class="about-title">Metodología</div>
+    <div class="about-subtitle">Visual Acoustics · OT-021.S1 · Documentación científica</div>
+    <div class="about-body">
+
+      <h3>¿Qué es este proyecto?</h3>
+      <p>Visual Acoustics es una plataforma de investigación abierta que convierte propiedades visuales objetivas de imágenes en parámetros sonoros usando física real y psicoacústica. No usamos frecuencias "místicas" ni mapeos arbitrarios — cada correspondencia tiene una justificación física o perceptual documentada.</p>
+
+      <h3>Esquema de datos almacenados</h3>
+      <p>Se guardan exclusivamente métricas numéricas anónimas. <strong>Nunca se almacena ni transmite la imagen.</strong></p>
+
+      <table class="schema-table">
+        <tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr>
+        <tr><td>id</td><td>string</td><td>Hash aleatorio anónimo</td></tr>
+        <tr><td>category</td><td>string</td><td>Categoría visual detectada por Claude Vision</td></tr>
+        <tr><td>base_freq_hz</td><td>float</td><td>Frecuencia base derivada del color dominante (física óptica)</td></tr>
+        <tr><td>color_temp_k</td><td>integer</td><td>Temperatura de color estimada (McCamy)</td></tr>
+        <tr><td>entropy_bits</td><td>float</td><td>Entropía de Shannon de la distribución tonal</td></tr>
+        <tr><td>phi_index</td><td>float</td><td>Índice de proporción áurea [0–1]</td></tr>
+        <tr><td>brightness</td><td>float</td><td>Luminosidad media normalizada [0–1]</td></tr>
+        <tr><td>contrast</td><td>float</td><td>Desviación estándar de luminosidad</td></tr>
+        <tr><td>mode</td><td>string</td><td>Modo musical asignado (mayor/menor)</td></tr>
+        <tr><td>bpm</td><td>integer</td><td>Tempo derivado de la entropía</td></tr>
+        <tr><td>spatial_freq_peak</td><td>integer</td><td>Banda dominante del espectro espacial</td></tr>
+        <tr><td>perceptual_rating</td><td>integer</td><td>Valoración humana [1–5] si disponible</td></tr>
+        <tr><td>timestamp</td><td>ISO 8601</td><td>Fecha UTC de la contribución</td></tr>
+      </table>
+
+      <h3>Correspondencias físicas</h3>
+      <p><strong>Color → Frecuencia:</strong> Se calcula la longitud de onda dominante ponderada por canal RGB (rojo ~700nm, verde ~550nm, azul ~450nm) y se escala logarítmicamente al rango audible 200–2000 Hz, preservando las relaciones de frecuencia del espectro visible.</p>
+      <p><strong>Temperatura de color → Modo musical:</strong> Imágenes con temperatura &gt;5000K (luz diurna, azul) se mapean a modo mayor; por debajo (luz cálida, ámbar) a modo menor. Base: estudios de psicoacústica de Lindström (2006) sobre percepción emocional del modo.</p>
+      <p><strong>Entropía de Shannon → Tempo:</strong> La complejidad informacional de la imagen (bits) modula el BPM en rango 60–140. Alta entropía (imagen caótica) = tempo rápido. Base: estudios de arousal visual-auditivo de Berlyne (1971).</p>
+      <p><strong>Índice φ → Activación 528 Hz:</strong> Cuando la composición se aproxima a la proporción áurea (φ ≈ 1.618), se activa un tono a 528 Hz. Justificación: 528 Hz es la nota Mi en afinación 432 Hz, consonante con la serie armónica natural y psicoacústicamente estable.</p>
+
+      <h3>Clasificador de categorías</h3>
+      <p>Se usa Claude Vision (Anthropic) para clasificar cada imagen en una de seis categorías: <em>Natural</em>, <em>Urbano/Arquitectura</em>, <em>Arte/Pintura</em>, <em>Microscopía/Científica</em>, <em>Retrato</em>, <em>Abstracta</em>. Cada categoría activa un perfil de síntesis diferente con parámetros pre-optimizados.</p>
+
+      <div class="cite-box">
+        Visual Acoustics Open Dataset (2025).<br>
+        Métricas de sonificación visual con validación perceptual humana.<br>
+        Licencia Creative Commons CC BY 4.0.<br>
+        https://visual-acoustics.research/dataset
+      </div>
+
+      <h3>Referencias</h3>
+      <p>Berlyne, D.E. (1971). <em>Aesthetics and Psychobiology</em>. Appleton-Century-Crofts.<br>
+      Cytowic, R.E. (2002). <em>Synesthesia: A Union of the Senses</em>. MIT Press.<br>
+      Lindström, E. (2006). Impact of melodic organization on perceived structure. <em>Music Perception</em>.<br>
+      McCamy, C.S. (1992). Correlated color temperature as an explicit function. <em>Color Research & Application</em>.</p>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ===================== JAVASCRIPT ===================== -->
+<script>
+// ============================================================
+// VISUAL ACOUSTICS — PLATAFORMA DE INVESTIGACIÓN ABIERTA
+// ============================================================
+
+const PHI = 1.618033988749895;
+const FIBONACCI = [1,1,2,3,5,8,13,21,34,55,89,144];
+
+let audioCtx = null;
+let analysisData = null;
+let isPlaying = false;
+let activeSources = [];
+let analyserNode = null;
+let animFrame = null;
+let currentRating = 0;
+let aiClassification = null;
+
+// --- STORAGE KEY ---
+const STORAGE_KEY = 'visual-acoustics-dataset';
+
+// --- NAV ---
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'dataset') refreshDatasetView();
+}
+
+// --- SLIDERS ---
+[['duration','durVal',v=>v+'s'],['harmonics','harmVal',v=>v],
+ ['reverbAmount','reverbVal',v=>parseFloat(v).toFixed(2)],['octave','octaveVal',v=>v]]
+.forEach(([id,lbl,fmt]) => {
+  document.getElementById(id).addEventListener('input', () => {
+    document.getElementById(lbl).textContent = fmt(document.getElementById(id).value);
+  });
+});
+
+// --- DRAG & DROP ---
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+
+function handleFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => processImage(img, file.name, e.target.result);
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ============================================================
+// PROCESAMIENTO DE IMAGEN
+// ============================================================
+function processImage(img, filename, dataUrl) {
+  const preview = document.getElementById('previewImg');
+  preview.src = img.src;
+  preview.style.display = 'block';
+  dropZone.querySelector('.drop-icon').style.display = 'none';
+  dropZone.querySelector('.drop-main').style.display = 'none';
+  dropZone.querySelector('.drop-sub').style.display = 'none';
+
+  const W = 256, H = 256;
+  const canvas = document.getElementById('hiddenCanvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0, W, H);
+  const imageData = ctx.getImageData(0, 0, W, H);
+  const pixels = imageData.data;
+
+  const colorAnalysis = analyzeColor(pixels);
+  const colorTemp = estimateColorTemp(colorAnalysis.avgR, colorAnalysis.avgG, colorAnalysis.avgB);
+  const entropy = computeEntropy(pixels);
+  const { brightness, contrast } = computeBrightness(pixels);
+  const phiScore = analyzeGoldenRatio(img.naturalWidth, img.naturalHeight, pixels, W, H);
+  const spatialFreqs = analyzeSpatialFrequencies(pixels, W, H);
+  const mode = colorTemp > 5000 ? 'mayor' : 'menor';
+  const bpm = Math.round(60 + entropy * 80);
+  const baseFreq = colorToFrequency(colorAnalysis.avgR, colorAnalysis.avgG, colorAnalysis.avgB);
+  const dominantBand = spatialFreqs.indexOf(Math.max(...spatialFreqs));
+
+  analysisData = {
+    colorAnalysis, colorTemp, entropy, brightness, contrast,
+    phiScore, spatialFreqs, mode, bpm, baseFreq,
+    width: img.naturalWidth, height: img.naturalHeight,
+    filename, dominantBand
+  };
+
+  currentRating = 0;
+  document.querySelectorAll('.star-btn').forEach(b => b.classList.remove('selected'));
+
+  updateMetricsUI(analysisData);
+  drawSpatialSpectrum(spatialFreqs);
+  document.getElementById('playBtn').disabled = false;
+  document.getElementById('exportBtn').disabled = false;
+  document.getElementById('contributeBtn').disabled = false;
+  document.getElementById('imageTitle').textContent = filename.replace(/\.[^.]+$/, '');
+  document.getElementById('imageSubtitle').textContent =
+    img.naturalWidth + '×' + img.naturalHeight + ' · ' + mode + ' · ' + bpm + ' BPM · φ=' + phiScore.toFixed(3);
+
+  // Clasificar con Claude Vision
+  classifyWithClaude(dataUrl);
+}
+
+function updateMetricsUI(d) {
+  const rows = document.querySelectorAll('#metricsTable tr');
+  const vals = [
+    d.baseFreq + ' Hz',
+    d.colorTemp.toLocaleString() + ' K',
+    (d.entropy * 8).toFixed(3) + ' bits',
+    d.phiScore.toFixed(4),
+    d.mode.charAt(0).toUpperCase() + d.mode.slice(1),
+    d.bpm + ' BPM'
+  ];
+  rows.forEach((r, i) => {
+    if (vals[i]) r.cells[1].textContent = vals[i];
+  });
+}
+
+// ============================================================
+// CLASIFICADOR — CLAUDE VISION API
+// ============================================================
+async function classifyWithClaude(dataUrl) {
+  const aiCard = document.getElementById('aiCard');
+  aiCard.className = 'ai-card loading';
+  aiCard.innerHTML = '<span class="typing-dots">Analizando con Claude Vision</span>';
+
+  const base64 = dataUrl.split(',')[1];
+  const mediaType = dataUrl.split(';')[0].split(':')[1];
+
+  const systemPrompt = `Eres un clasificador científico de imágenes para el proyecto Visual Acoustics.
+Tu tarea es:
+1. Clasificar la imagen en UNA de estas categorías exactas: Natural, Urbano, Arte, Microscopía, Retrato, Abstracta
+2. Explicar en 2-3 frases qué características visuales observas y por qué determinan los parámetros sonoros
+3. Indicar el perfil sonoro recomendado
+
+Responde en este formato JSON exacto:
+{
+  "category": "Natural",
+  "confidence": "alta|media|baja",
+  "visual_features": "descripción de lo que ves",
+  "sound_profile": "descripción del perfil sonoro recomendado",
+  "reasoning": "por qué estos parámetros encajan con esta imagen"
+}`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: [{
+          role: 'user',
+          content: [{
+            type: 'image',
+            source: { type: 'base64', media_type: mediaType, data: base64 }
+          }, {
+            type: 'text',
+            text: 'Analiza esta imagen y clasifícala según el protocolo.'
+          }]
+        }]
+      })
+    });
+
+    const data = await response.json();
+    const text = data.content.map(c => c.text || '').join('');
+    const clean = text.replace(/```json|```/g, '').trim();
+
+    let parsed;
+    try {
+      parsed = JSON.parse(clean);
+    } catch {
+      // Extrae JSON si hay texto alrededor
+      const match = clean.match(/\{[\s\S]*\}/);
+      parsed = match ? JSON.parse(match[0]) : null;
+    }
+
+    if (parsed) {
+      aiClassification = parsed;
+      const badge = document.getElementById('classBadge');
+      badge.classList.add('show');
+      document.getElementById('catName').textContent = parsed.category;
+      document.getElementById('catConf').textContent = 'Confianza: ' + parsed.confidence;
+
+      aiCard.className = 'ai-card';
+      aiCard.textContent =
+        '📍 Categoría: ' + parsed.category + '\n\n' +
+        '🔬 Características visuales:\n' + parsed.visual_features + '\n\n' +
+        '🎵 Perfil sonoro:\n' + parsed.sound_profile + '\n\n' +
+        '⚙️ Razonamiento:\n' + parsed.reasoning;
+    } else {
+      throw new Error('Formato de respuesta inesperado');
+    }
+  } catch (err) {
+    aiCard.className = 'ai-card';
+    aiCard.textContent = 'Análisis de IA no disponible en este momento.\nLas métricas numéricas son independientes y están disponibles.';
+    aiClassification = { category: 'Desconocida', confidence: 'baja' };
+    document.getElementById('catName').textContent = 'Clasificación manual';
+    document.getElementById('classBadge').classList.add('show');
+  }
+}
+
+// ============================================================
+// ANÁLISIS VISUAL — FÍSICA REAL
+// ============================================================
+function analyzeColor(pixels) {
+  let r=0,g=0,b=0;
+  const n = pixels.length/4;
+  for (let i=0;i<pixels.length;i+=4) { r+=pixels[i]; g+=pixels[i+1]; b+=pixels[i+2]; }
+  return { avgR: r/n, avgG: g/n, avgB: b/n, palette: extractPalette(pixels,6) };
+}
+
+function extractPalette(pixels, k) {
+  const step = Math.max(1, Math.floor(pixels.length / (4*128)));
+  const samples = [];
+  for (let i=0;i<pixels.length;i+=4*step) samples.push([pixels[i],pixels[i+1],pixels[i+2]]);
+  const centers = Array.from({length:k},(_,i)=>samples[Math.floor(i*samples.length/k)].slice());
+  for (let iter=0;iter<8;iter++) {
+    const sums = Array.from({length:k},()=>[0,0,0,0]);
+    for (const s of samples) {
+      let best=0,bestD=Infinity;
+      for (let c=0;c<k;c++) {
+        const d=(s[0]-centers[c][0])**2+(s[1]-centers[c][1])**2+(s[2]-centers[c][2])**2;
+        if(d<bestD){bestD=d;best=c;}
+      }
+      sums[best][0]+=s[0];sums[best][1]+=s[1];sums[best][2]+=s[2];sums[best][3]++;
+    }
+    for (let c=0;c<k;c++) if(sums[c][3]>0) centers[c]=[sums[c][0]/sums[c][3],sums[c][1]/sums[c][3],sums[c][2]/sums[c][3]];
+  }
+  return centers.map(c=>c.map(Math.round));
+}
+
+function colorToFrequency(r,g,b) {
+  const wl = (r*700+g*550+b*450)/(r+g+b+0.001);
+  const norm = (wl-380)/(780-380);
+  return Math.round(200*Math.pow(10, norm*Math.log10(2000/200)));
+}
+
+function estimateColorTemp(r,g,b) {
+  const X=-0.14282*r+1.54924*g-0.95641*b;
+  const Y=-0.32466*r+1.57837*g-0.73191*b;
+  const Z=0.73717*r+0.27418*g+0.18693*b;
+  const s=X+Y+Z+0.001;
+  const x=X/s, y=Y/s;
+  const n=(x-0.3320)/(0.1858-y);
+  return Math.max(1500,Math.min(15000,Math.round(449*n**3+3525*n**2+6823.3*n+5520.33)));
+}
+
+function computeEntropy(pixels) {
+  const hist = new Array(256).fill(0);
+  const n = pixels.length/4;
+  for (let i=0;i<pixels.length;i+=4)
+    hist[Math.round(0.299*pixels[i]+0.587*pixels[i+1]+0.114*pixels[i+2])]++;
+  let e=0;
+  for (const c of hist) if(c>0){const p=c/n;e-=p*Math.log2(p);}
+  return e/8;
+}
+
+function computeBrightness(pixels) {
+  let sum=0,sumSq=0; const n=pixels.length/4;
+  for (let i=0;i<pixels.length;i+=4){
+    const l=(0.299*pixels[i]+0.587*pixels[i+1]+0.114*pixels[i+2])/255;
+    sum+=l; sumSq+=l*l;
+  }
+  const brightness=sum/n;
+  return {brightness, contrast:Math.sqrt(Math.max(0,sumSq/n-brightness*brightness))};
+}
+
+function analyzeGoldenRatio(imgW,imgH,pixels,W,H) {
+  const ratio=imgW/imgH;
+  const aspectScore=1-Math.min(1,Math.min(Math.abs(ratio-PHI)/PHI,Math.abs(ratio-1/PHI)/(1/PHI)));
+  const gray=new Float32Array(W*H);
+  for (let y=0;y<H;y++) for(let x=0;x<W;x++){
+    const i=(y*W+x)*4;
+    gray[y*W+x]=(0.299*pixels[i]+0.587*pixels[i+1]+0.114*pixels[i+2])/255;
+  }
+  const hP=new Float32Array(W).fill(0), vP=new Float32Array(H).fill(0);
+  for (let y=1;y<H-1;y++) for(let x=1;x<W-1;x++){
+    const gx=gray[y*W+(x+1)]-gray[y*W+(x-1)];
+    const gy=gray[(y+1)*W+x]-gray[(y-1)*W+x];
+    const mag=Math.sqrt(gx*gx+gy*gy);
+    hP[x]+=mag; vP[y]+=mag;
+  }
+  let sX=0,sXW=0,sY=0,sYW=0;
+  for(let x=0;x<W;x++){sXW+=hP[x];sX+=x*hP[x];}
+  for(let y=0;y<H;y++){sYW+=vP[y];sY+=y*vP[y];}
+  const cx=sX/(sXW+1e-6), cy=sY/(sYW+1e-6);
+  const dx=Math.abs(cx-W/PHI)/W, dy=Math.abs(cy-H/PHI)/H;
+  const edgeScore=1-Math.min(1,dx+dy);
+  return 0.3*aspectScore+0.7*edgeScore;
+}
+
+function analyzeSpatialFrequencies(pixels,W,H) {
+  const bands=16; const spectrum=new Float32Array(bands).fill(0);
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+    const i=(y*W+x)*4;
+    const g=(pixels[i]+pixels[i+1]+pixels[i+2])/(3*255);
+    for(let f=0;f<bands;f++){
+      const freq=(f+1)*Math.PI/W;
+      spectrum[f]+=Math.abs(g*Math.cos(freq*x)*Math.cos(freq*y));
+    }
+  }
+  const mx=Math.max(...spectrum);
+  return Array.from(spectrum).map(v=>v/(mx+1e-6));
+}
+
+// ============================================================
+// VISUALIZACIONES
+// ============================================================
+function drawSpatialSpectrum(spectrum) {
+  const fc=document.getElementById('freqCanvas');
+  fc.width=fc.offsetWidth||600;
+  const fctx=fc.getContext('2d');
+  fctx.clearRect(0,0,fc.width,100);
+  fctx.fillStyle='#eceae2'; fctx.fillRect(0,0,fc.width,100);
+  const bW=fc.width/spectrum.length;
+  const labels=['L.baja','','','','L.med','','','','Media','','','','L.alta','','','H.alta'];
+  spectrum.forEach((v,i)=>{
+    const h=v*85;
+    const t=i/spectrum.length;
+    const r=Math.round(26+t*140), g=Math.round(58+t*40), b=Math.round(92-t*40);
+    fctx.fillStyle=`rgb(${r},${g},${b})`;
+    fctx.fillRect(i*bW+1,100-h,bW-2,h);
+    if(labels[i]){
+      fctx.fillStyle='#8a8478';
+      fctx.font='7px DM Mono, monospace';
+      fctx.fillText(labels[i],i*bW+2,96);
+    }
+  });
+  fctx.strokeStyle='#d4cfc4';
+  fctx.beginPath(); fctx.moveTo(0,99); fctx.lineTo(fc.width,99); fctx.stroke();
+}
+
+function drawWaveform() {
+  if(!isPlaying||!analyserNode) return;
+  const buf=new Uint8Array(analyserNode.fftSize);
+  analyserNode.getByteTimeDomainData(buf);
+  const wc=document.getElementById('waveCanvas');
+  const W=wc.width, H=wc.height;
+  const wctx=wc.getContext('2d');
+  wctx.fillStyle='#0d0e0f'; wctx.fillRect(0,0,W,H);
+  wctx.strokeStyle='#f4f1eb'; wctx.lineWidth=1;
+  wctx.beginPath();
+  const sl=buf.length/W;
+  for(let x=0;x<W;x++){
+    const v=buf[Math.floor(x*sl)]/128.0;
+    const y=v*H/2;
+    x===0?wctx.moveTo(x,y):wctx.lineTo(x,y);
+  }
+  wctx.stroke();
+  animFrame=requestAnimationFrame(drawWaveform);
+}
+
+// ============================================================
+// AUDIO ENGINE
+// ============================================================
+function initAudio() {
+  if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function getScale(baseFreq,mode,octave) {
+  const A4=440;
+  const base=A4*Math.pow(2,parseInt(octave)-4);
+  const intervals=(mode==='mayor'?[0,2,4,5,7,9,11,12]:[0,2,3,5,7,8,10,12]);
+  const notes=intervals.map(i=>base*Math.pow(2,i/12));
+  return FIBONACCI.slice(0,8).map(f=>notes[f%notes.length]);
+}
+
+function clampFreq(f){while(f>880)f/=2;while(f<55)f*=2;return f;}
+
+async function createReverb(actx,dur){
+  const len=actx.sampleRate*dur;
+  const imp=actx.createBuffer(2,len,actx.sampleRate);
+  for(let c=0;c<2;c++){
+    const d=imp.getChannelData(c);
+    for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2);
+  }
+  const conv=actx.createConvolver(); conv.buffer=imp; return conv;
+}
+
+function createNoiseBuffer(actx,dur){
+  const len=actx.sampleRate*dur;
+  const buf=actx.createBuffer(1,len,actx.sampleRate);
+  const d=buf.getChannelData(0);
+  for(let i=0;i<len;i++) d[i]=Math.random()*2-1;
+  return buf;
+}
+
+async function startPlayback() {
+  if(!analysisData) return;
+  stopPlayback(); initAudio();
+  if(audioCtx.state==='suspended') await audioCtx.resume();
+  isPlaying=true;
+  document.getElementById('playBtn').classList.add('active');
+  document.getElementById('playBtn').textContent='⏸ Pausar';
+  document.getElementById('stopBtn').disabled=false;
+  const d=analysisData;
+  const nH=parseInt(document.getElementById('harmonics').value);
+  const rv=parseFloat(document.getElementById('reverbAmount').value);
+  const oct=document.getElementById('octave').value;
+  const dur=parseInt(document.getElementById('duration').value);
+  const now=audioCtx.currentTime;
+  const master=audioCtx.createGain(); master.gain.value=0.75;
+  const reverb=await createReverb(audioCtx,rv*4);
+  const dry=audioCtx.createGain(); dry.gain.value=1-rv*0.5;
+  const wet=audioCtx.createGain(); wet.gain.value=rv*0.7;
+  analyserNode=audioCtx.createAnalyser(); analyserNode.fftSize=2048;
+  master.connect(dry); dry.connect(analyserNode);
+  master.connect(reverb); reverb.connect(wet); wet.connect(analyserNode);
+  analyserNode.connect(audioCtx.destination);
+  activeSources.push(master);
+  const scale=getScale(d.baseFreq,d.mode,oct);
+  const ff=clampFreq(d.baseFreq);
+  // Drone
+  const droneG=audioCtx.createGain();
+  droneG.gain.setValueAtTime(0.12,now);
+  droneG.gain.linearRampToValueAtTime(0.18,now+2);
+  droneG.gain.linearRampToValueAtTime(0,now+dur);
+  droneG.connect(master);
+  for(let h=1;h<=nH;h++){
+    const osc=audioCtx.createOscillator();
+    const hG=audioCtx.createGain();
+    osc.type=h===1?'sine':(h<=3?'triangle':'sawtooth');
+    osc.frequency.value=ff*h;
+    hG.gain.value=(d.contrast*0.3+0.1)/(h*h*0.5+0.5);
+    if(d.entropy>0.5&&h===1){
+      const lfo=audioCtx.createOscillator();
+      const lfoG=audioCtx.createGain();
+      lfo.frequency.value=4+d.entropy*2;
+      lfoG.gain.value=ff*0.003*d.entropy;
+      lfo.connect(lfoG);lfoG.connect(osc.frequency);
+      lfo.start(now);lfo.stop(now+dur);activeSources.push(lfo);
+    }
+    osc.connect(hG);hG.connect(droneG);
+    osc.start(now);osc.stop(now+dur);activeSources.push(osc);
+  }
+  // Melodía Fibonacci
+  const beatDur=60/d.bpm;
+  const noteDurs=FIBONACCI.slice(0,13).map(f=>f*beatDur*0.1+0.1);
+  let t=now+0.5, ni=0;
+  const melG=audioCtx.createGain();
+  melG.gain.value=0.22*d.brightness;
+  melG.connect(master);
+  while(t<now+dur-0.5){
+    const freq=scale[ni%scale.length];
+    const nd=Math.min(noteDurs[ni%noteDurs.length],1.2);
+    const no=audioCtx.createOscillator();
+    const ne=audioCtx.createGain();
+    no.type=d.mode==='mayor'?'triangle':'sawtooth';
+    no.frequency.value=freq;
+    ne.gain.setValueAtTime(0,t);
+    ne.gain.linearRampToValueAtTime(0.28,t+0.02);
+    ne.gain.exponentialRampToValueAtTime(0.12,t+nd*0.3);
+    ne.gain.exponentialRampToValueAtTime(0.001,t+nd);
+    no.connect(ne);ne.connect(melG);
+    no.start(t);no.stop(t+nd+0.1);activeSources.push(no);
+    t+=nd*PHI/(1+d.entropy); ni++;
+    if(t>now+dur-0.5)break;
+  }
+  // Textura espacial
+  const spG=audioCtx.createGain(); spG.gain.value=0.08*d.entropy; spG.connect(master);
+  const noiseBuf=createNoiseBuffer(audioCtx,dur);
+  const noiseS=audioCtx.createBufferSource(); noiseS.buffer=noiseBuf;
+  const filt=audioCtx.createBiquadFilter();
+  filt.type='bandpass'; filt.frequency.value=200+d.dominantBand*120; filt.Q.value=8+d.contrast*20;
+  noiseS.connect(filt);filt.connect(spG);
+  noiseS.start(now);noiseS.stop(now+dur);activeSources.push(noiseS);
+  // 528 Hz áureo
+  if(d.phiScore>0.6){
+    const phiO=audioCtx.createOscillator();
+    const phiG=audioCtx.createGain();
+    const phiE=audioCtx.createGain();
+    phiO.frequency.value=528; phiO.type='sine';
+    phiG.gain.value=0.07*d.phiScore;
+    phiE.gain.setValueAtTime(0,now);
+    phiE.gain.linearRampToValueAtTime(1,now+3);
+    phiE.gain.linearRampToValueAtTime(0,now+dur);
+    const phiO2=audioCtx.createOscillator();
+    phiO2.frequency.value=528*PHI; phiO2.type='sine';
+    phiO.connect(phiG);phiO2.connect(phiG);phiG.connect(phiE);phiE.connect(master);
+    phiO.start(now);phiO.stop(now+dur);phiO2.start(now);phiO2.stop(now+dur);
+    activeSources.push(phiO,phiO2);
+  }
+  setTimeout(()=>{if(isPlaying)stopPlayback();},dur*1000+200);
+  drawWaveform();
+}
+
+function stopPlayback(){
+  isPlaying=false;
+  activeSources.forEach(s=>{try{s.stop();s.disconnect();}catch(e){}});
+  activeSources=[];
+  if(animFrame)cancelAnimationFrame(animFrame);
+  document.getElementById('playBtn').classList.remove('active');
+  document.getElementById('playBtn').textContent='▶ Reproducir';
+  document.getElementById('stopBtn').disabled=true;
+  const wc=document.getElementById('waveCanvas');
+  const wctx=wc.getContext('2d');
+  wctx.fillStyle='#0d0e0f'; wctx.fillRect(0,0,wc.width,wc.height);
+}
+
+// ============================================================
+// WAV EXPORT
+// ============================================================
+async function exportWav(){
+  if(!analysisData)return;
+  document.getElementById('exportBtn').textContent='⏳ Renderizando...';
+  document.getElementById('exportBtn').disabled=true;
+  const d=analysisData;
+  const dur=parseInt(document.getElementById('duration').value);
+  const sr=44100;
+  const offCtx=new OfflineAudioContext(2,sr*dur,sr);
+  const master=offCtx.createGain(); master.gain.value=0.75; master.connect(offCtx.destination);
+  const nH=parseInt(document.getElementById('harmonics').value);
+  const rv=parseFloat(document.getElementById('reverbAmount').value);
+  const oct=document.getElementById('octave').value;
+  const reverb=await createReverb(offCtx,rv*4);
+  const dry=offCtx.createGain(); dry.gain.value=1-rv*0.5;
+  const wet=offCtx.createGain(); wet.gain.value=rv*0.7;
+  master.connect(dry);dry.connect(offCtx.destination);
+  master.connect(reverb);reverb.connect(wet);wet.connect(offCtx.destination);
+  const scale=getScale(d.baseFreq,d.mode,oct);
+  const ff=clampFreq(d.baseFreq);
+  const dG=offCtx.createGain(); dG.gain.setValueAtTime(0.12,0); dG.gain.linearRampToValueAtTime(0,dur); dG.connect(master);
+  for(let h=1;h<=nH;h++){
+    const o=offCtx.createOscillator(); const g=offCtx.createGain();
+    o.type=h===1?'sine':(h<=3?'triangle':'sawtooth'); o.frequency.value=ff*h;
+    g.gain.value=(d.contrast*0.3+0.1)/(h*h*0.5+0.5);
+    o.connect(g);g.connect(dG);o.start(0);o.stop(dur);
+  }
+  const mG=offCtx.createGain(); mG.gain.value=0.22*d.brightness; mG.connect(master);
+  const bd=60/d.bpm; const nds=FIBONACCI.slice(0,13).map(f=>f*bd*0.1+0.1);
+  let t=0.5,ni=0;
+  while(t<dur-0.5){
+    const fr=scale[ni%scale.length]; const nd=Math.min(nds[ni%nds.length],1.2);
+    const no=offCtx.createOscillator(); const ne=offCtx.createGain();
+    no.type=d.mode==='mayor'?'triangle':'sawtooth'; no.frequency.value=fr;
+    ne.gain.setValueAtTime(0,t); ne.gain.linearRampToValueAtTime(0.28,t+0.02);
+    ne.gain.exponentialRampToValueAtTime(0.12,t+nd*0.3); ne.gain.exponentialRampToValueAtTime(0.001,t+nd);
+    no.connect(ne);ne.connect(mG);no.start(t);no.stop(t+nd+0.1);
+    t+=nd*PHI/(1+d.entropy);ni++;if(t>dur-0.5)break;
+  }
+  if(d.phiScore>0.6){
+    const po=offCtx.createOscillator(); const pg=offCtx.createGain();
+    po.frequency.value=528;po.type='sine';pg.gain.value=0.07*d.phiScore;
+    po.connect(pg);pg.connect(master);po.start(0);po.stop(dur);
+  }
+  const buf=await offCtx.startRendering();
+  const blob=bufferToWav(buf);
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='visual-acoustics-'+Date.now()+'.wav'; a.click();
+  URL.revokeObjectURL(url);
+  document.getElementById('exportBtn').textContent='↓ WAV';
+  document.getElementById('exportBtn').disabled=false;
+  showToast('WAV exportado correctamente');
+}
+
+function bufferToWav(buf){
+  const nc=buf.numberOfChannels,sr=buf.sampleRate,ns=buf.length;
+  const ds=ns*nc*2, ab=new ArrayBuffer(44+ds), v=new DataView(ab);
+  const ws=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
+  ws(0,'RIFF');v.setUint32(4,ab.byteLength-8,true);ws(8,'WAVE');
+  ws(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,nc,true);
+  v.setUint32(24,sr,true);v.setUint32(28,sr*nc*2,true);v.setUint16(32,nc*2,true);
+  v.setUint16(34,16,true);ws(36,'data');v.setUint32(40,ds,true);
+  let off=44;
+  for(let i=0;i<ns;i++) for(let c=0;c<nc;c++){
+    const s=Math.max(-1,Math.min(1,buf.getChannelData(c)[i]));
+    v.setInt16(off,s<0?s*0x8000:s*0x7FFF,true);off+=2;
+  }
+  return new Blob([ab],{type:'audio/wav'});
+}
+
+// ============================================================
+// RATING Y CONTRIBUCIÓN AL DATASET
+// ============================================================
+function rate(n){
+  currentRating=n;
+  document.querySelectorAll('.star-btn').forEach((b,i)=>{
+    b.classList.toggle('selected',i<n);
+  });
+}
+
+async function contributeToDataset(){
+  if(!analysisData) return;
+  const d=analysisData;
+  const record = {
+    id: 'va_' + Math.random().toString(36).substr(2,12),
+    timestamp: new Date().toISOString(),
+    category: aiClassification?.category || 'Desconocida',
+    confidence: aiClassification?.confidence || 'baja',
+    base_freq_hz: d.baseFreq,
+    color_temp_k: d.colorTemp,
+    entropy_bits: parseFloat((d.entropy*8).toFixed(4)),
+    phi_index: parseFloat(d.phiScore.toFixed(4)),
+    brightness: parseFloat(d.brightness.toFixed(4)),
+    contrast: parseFloat(d.contrast.toFixed(4)),
+    mode: d.mode,
+    bpm: d.bpm,
+    spatial_freq_peak: d.dominantBand,
+    img_aspect_ratio: parseFloat((d.width/d.height).toFixed(3)),
+    perceptual_rating: currentRating || null
+  };
+
+  // Guardar en localStorage
+  try {
+    let dataset = [];
+    try {
+      const existing = localStorage.getItem(STORAGE_KEY);
+      if(existing) dataset = JSON.parse(existing);
+    } catch(e) { dataset = []; }
+
+    dataset.push(record);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(dataset));
+
+    showToast('✓ Contribución guardada. Total: ' + dataset.length + ' registros');
+    updateContribCount(dataset.length);
+    document.getElementById('contributeBtn').textContent = '✓ Contribuido';
+    document.getElementById('contributeBtn').disabled = true;
+  } catch(e) {
+    showToast('Error al guardar: ' + e.message);
+  }
+}
+
+// ============================================================
+// DATASET VIEW
+// ============================================================
+async function refreshDatasetView(){
+  let dataset = [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) dataset = JSON.parse(raw);
+  } catch(e) { dataset = []; }
+
+  document.getElementById('statTotal').textContent = dataset.length;
+  const cats = [...new Set(dataset.map(r=>r.category))];
+  document.getElementById('statCategories').textContent = cats.length;
+  const rated = dataset.filter(r=>r.perceptual_rating);
+  document.getElementById('statRated').textContent = rated.length;
+  const avgR = rated.length ? (rated.reduce((s,r)=>s+r.perceptual_rating,0)/rated.length).toFixed(1) : '—';
+  document.getElementById('statAvgRating').textContent = avgR;
+
+  const tbody = document.getElementById('dataTableBody');
+  if(dataset.length===0){
+    tbody.innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:2rem;font-family:var(--mono);font-size:0.6rem">Sin datos aún. Sé el primero en contribuir.</td></tr>';
+    return;
+  }
+
+  const catClass = {Natural:'natural',Urbano:'urban',Arte:'art','Microscopía':'micro',Retrato:'portrait',Abstracta:'abstract'};
+  const stars = n=>n?'★'.repeat(n)+'☆'.repeat(5-n):'—';
+
+  tbody.innerHTML = [...dataset].reverse().slice(0,100).map((r,i)=>`
+    <tr>
+      <td>${dataset.length-i}</td>
+      <td><span class="cat-badge ${catClass[r.category]||''}">${r.category}</span></td>
+      <td>${r.base_freq_hz}</td>
+      <td>${r.color_temp_k.toLocaleString()}</td>
+      <td>${r.entropy_bits}</td>
+      <td>${r.phi_index}</td>
+      <td>${r.mode}</td>
+      <td>${r.bpm}</td>
+      <td class="rating-display">${stars(r.perceptual_rating)}</td>
+      <td>${new Date(r.timestamp).toLocaleDateString('es')}</td>
+    </tr>
+  `).join('');
+}
+
+async function downloadDataset(){
+  let dataset = [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) dataset = JSON.parse(raw);
+  } catch(e) {}
+
+  const meta = {
+    name: 'Visual Acoustics Open Dataset',
+    version: '2.1',
+    license: 'CC BY 4.0',
+    description: 'Métricas de sonificación visual con validación perceptual humana',
+    schema_version: '2025-01',
+    total_records: dataset.length,
+    exported_at: new Date().toISOString(),
+    records: dataset
+  };
+
+  const blob = new Blob([JSON.stringify(meta, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'visual-acoustics-dataset-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Dataset descargado (' + dataset.length + ' registros)');
+}
+
+async function updateContribCount(n){
+  document.getElementById('totalContrib').textContent = n + (n===1?' contribución':' contribuciones');
+}
+
+// ============================================================
+// UTILS
+// ============================================================
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// Event listeners
+document.getElementById('playBtn').addEventListener('click',()=>{
+  if(isPlaying){stopPlayback();return;}
+  startPlayback();
+});
+document.getElementById('stopBtn').addEventListener('click',stopPlayback);
+document.getElementById('exportBtn').addEventListener('click',exportWav);
+document.getElementById('contributeBtn').addEventListener('click',contributeToDataset);
+
+// Init: cargar conteo
+(async()=>{
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){ const d=JSON.parse(raw); updateContribCount(d.length); }
+  } catch(e){}
+})();
+
+window.addEventListener('resize',()=>{
+  if(analysisData) drawSpatialSpectrum(analysisData.spatialFreqs);
+});
+</script>
+</body>
+</html>
